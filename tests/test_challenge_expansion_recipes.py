@@ -1,5 +1,7 @@
 import unittest
+import json
 from pathlib import Path
+from unittest.mock import patch
 
 from services.postgres_service import PostgresAdminService
 
@@ -64,8 +66,45 @@ class ChallengeExpansionRecipeTests(unittest.TestCase):
                 for item in prepared["destinations"]
                 for _schema_name, function_name in item["function_references"]
             },
-            {"ascii", "btrim", "left", "right", "round", "upper"},
+            {"ascii", "btrim", "jsonb_to_record", "left", "right", "round", "upper"},
         )
+
+    def test_stable_jsonb_projection_is_the_only_stable_function_allowed(self):
+        service = PostgresAdminService()
+        destination = {
+            "function_references": [(None, "jsonb_to_record")],
+        }
+        response = json.dumps(
+            [
+                {
+                    "requested_schema": None,
+                    "function_name": "jsonb_to_record",
+                    "candidates": [
+                        {
+                            "schema_name": "pg_catalog",
+                            "volatility": "s",
+                            "security_definer": False,
+                            "function_kind": "f",
+                        }
+                    ],
+                }
+            ]
+        )
+
+        with patch.object(service, "run_remote_command", return_value=response):
+            service._validate_cross_table_expansion_functions(
+                "challenge",
+                [destination],
+            )
+
+        response = response.replace("jsonb_to_record", "current_setting")
+        destination["function_references"] = [(None, "current_setting")]
+        with patch.object(service, "run_remote_command", return_value=response):
+            with self.assertRaisesRegex(RuntimeError, "approved native"):
+                service._validate_cross_table_expansion_functions(
+                    "challenge",
+                    [destination],
+                )
 
 
 if __name__ == "__main__":

@@ -13672,20 +13672,27 @@ FROM requested;
             if not candidates:
                 problems.append(f"{function_label}: function not found")
                 continue
+            safe_stable_native_functions = {"jsonb_to_record"}
             unsafe_candidates = [
                 candidate
                 for candidate in candidates
                 if (
                     str(candidate.get("schema_name") or "") != "pg_catalog"
-                    or str(candidate.get("volatility") or "") != "i"
+                    or (
+                        str(candidate.get("volatility") or "") != "i"
+                        and not (
+                            str(candidate.get("volatility") or "") == "s"
+                            and function_name in safe_stable_native_functions
+                        )
+                    )
                     or bool(candidate.get("security_definer"))
                     or str(candidate.get("function_kind") or "") == "p"
                 )
             ]
             if unsafe_candidates:
                 problems.append(
-                    f"{function_label}: only native immutable functions without "
-                    "SECURITY DEFINER are accepted"
+                    f"{function_label}: only approved native deterministic functions "
+                    "without SECURITY DEFINER are accepted"
                 )
         if problems:
             raise RuntimeError(

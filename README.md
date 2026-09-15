@@ -67,6 +67,13 @@ After a successful cross-table **Expand** operation, the application displays a 
 
 Local work is measured with per-thread CPU time. Remote command work is clocked on the Linux server, and expansion statements are clocked inside PostgreSQL. SSH connection and result-return transit are therefore excluded from the measured processing total. The report can be exported as a UTF-8 `.txt` file.
 
+## Challenge submission
+
+The optimized competition entry, benchmark methodology, output counts, and
+known limitations are documented in [SUBMISSION.md](./SUBMISSION.md). A small
+standard-library benchmark helper is provided at
+[`tools/sql_benchmark.py`](./tools/sql_benchmark.py).
+
 ## Main dependencies
 
 - CustomTkinter
